@@ -2,10 +2,10 @@
 @import "tailwindcss";
 
 :root {
-  --orange-primary: #FF6B35;
-  --orange-dark: #E85A24;
-  --orange-light: #FF8C42;
-  --black-primary: #0D0D0D;
+  --orange-primary: #F28C28;
+  --orange-dark: #D67A1F;
+  --orange-light: #F5A54D;
+  --black-primary: #000000;
   --black-secondary: #1A1A1A;
   --black-tertiary: #2D2D2D;
   --white-primary: #FFFFFF;
@@ -13,14 +13,14 @@
   --white-tertiary: #E5E5E5;
   --gray: #888888;
   
-  --background: #0D0D0D;
+  --background: #000000;
   --foreground: #FFFFFF;
 }
 
 .light {
   --background: #FFFFFF;
-  --foreground: #0D0D0D;
-  --black-primary: #0D0D0D;
+  --foreground: #000000;
+  --black-primary: #000000;
   --black-secondary: #1A1A1A;
   --black-tertiary: #2D2D2D;
 }
@@ -138,13 +138,14 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary {
   background: var(--orange-primary);
   color: white;
-  padding: 14px 32px;
-  border-radius: 10px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-weight: 600;
+  font-size: 14px;
   transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-primary:hover {
@@ -196,18 +197,37 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .section-padding {
-  padding: 120px 24px;
+  padding: 80px 24px;
 }
 
-@media (max-width: 768px) {
+@media (min-width: 768px) {
   .section-padding {
-    padding: 80px 20px;
+    padding: 100px 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .section-padding {
+    padding: 120px 24px;
   }
 }
 
 .container-custom {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 640px) {
+  .container-custom {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-custom {
+    padding: 0 32px;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -225,4 +245,32 @@ h1, h2, h3, h4, h5, h6 {
 
 .light ::-webkit-scrollbar-track {
   background: var(--white-tertiary);
+}
+
+.custom-cursor {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--orange-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.15s ease-out, background 0.15s ease-out, opacity 0.15s ease-out;
+}
+
+.custom-cursor.cursor-hover {
+  transform: scale(1.8);
+  background: var(--orange-primary);
+  opacity: 0.3;
+}
+
+@media (pointer: coarse) {
+  .custom-cursor {
+    display: none;
+  }
+}
+
+::selection {
+  background: var(--orange-primary);
+  color: #000000;
 }

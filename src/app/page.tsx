@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionTemplate, useMotionValue } from 'framer-motion';
 import { 
   Brain, 
   Cpu, 
@@ -141,6 +141,10 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
   const heroRef = useRef<HTMLElement>(null);
+  
+  const cursorX = useMotionValue(-100);
+  const cursorY = useMotionValue(-100);
+  const cursorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -172,6 +176,37 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const moveCursor = (e: MouseEvent) => {
+      cursorX.set(e.clientX - 16);
+      cursorY.set(e.clientY - 16);
+    };
+    
+    window.addEventListener('mousemove', moveCursor);
+    return () => window.removeEventListener('mousemove', moveCursor);
+  }, [cursorX, cursorY]);
+
+  useEffect(() => {
+    const cursor = cursorRef.current;
+    if (!cursor) return;
+    
+    const links = document.querySelectorAll('a, button, .card, input, textarea');
+    const handleMouseEnter = () => cursor.classList.add('cursor-hover');
+    const handleMouseLeave = () => cursor.classList.remove('cursor-hover');
+    
+    links.forEach(link => {
+      link.addEventListener('mouseenter', handleMouseEnter);
+      link.addEventListener('mouseleave', handleMouseLeave);
+    });
+    
+    return () => {
+      links.forEach(link => {
+        link.removeEventListener('mouseenter', handleMouseEnter);
+        link.removeEventListener('mouseleave', handleMouseLeave);
+      });
+    };
+  }, []);
+
   const toggleTheme = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
@@ -188,12 +223,183 @@ export default function Home() {
 
   return (
     <div className={darkMode ? '' : 'light'}>
+      {/* Custom Cursor */}
+      <motion.div
+        ref={cursorRef}
+        className="custom-cursor"
+        style={{
+          x: cursorX,
+          y: cursorY,
+        }}
+      />
+      
+      {/* Sidebar - Toggleable below laptop (1024px) */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed left-0 top-0 h-full w-72 z-40 lg:hidden"
+            style={{ 
+              background: darkMode ? 'rgba(13,13,13,0.98)' : 'rgba(255,255,255,0.98)',
+              backdropFilter: 'blur(20px)',
+              borderRight: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+            }}
+          >
+            <div className="flex flex-col h-full pt-20 px-6">
+              <div className="mb-8">
+                <span className="text-2xl font-bold gradient-text">ENCON</span>
+                <span className={`text-2xl ${darkMode ? 'text-white' : 'text-black'}`}>-TECH</span>
+              </div>
+              <nav className="flex flex-col gap-4">
+                {['about', 'services', 'why-us', 'portfolio', 'technology', 'process', 'contact'].map((item) => (
+                  <motion.button
+                    key={item}
+                    onClick={() => scrollToSection(item)}
+                    className={`text-left text-base font-medium py-2 transition-colors hover:text-[var(--orange-primary)] ${
+                      activeSection === item ? 'text-[var(--orange-primary)]' : darkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {item.charAt(0).toUpperCase() + item.slice(1).replace('-', ' ')}
+                  </motion.button>
+                ))}
+              </nav>
+              <div className="mt-auto pb-8">
+                <motion.button
+                  onClick={toggleTheme}
+                  className="flex items-center gap-3 py-3 w-full"
+                  style={{ color: darkMode ? '#fff' : '#000000' }}
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  <span className="text-sm">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Header - Visible below laptop */}
+      <motion.header
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className="fixed top-0 left-0 right-0 z-50 lg:hidden"
+        style={{
+          background: scrolled 
+            ? (darkMode ? 'rgba(13, 13, 13, 0.9)' : 'rgba(255, 255, 255, 0.9)')
+            : 'transparent',
+          backdropFilter: scrolled ? 'blur(12px)' : 'none',
+        }}
+      >
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2"
+            style={{ color: darkMode ? '#fff' : '#0D0D0D' }}
+          >
+            <Menu size={24} />
+          </button>
+          <a href="#" className="text-xl font-bold">
+            <span className="gradient-text">ENCON</span>
+            <span className={`text-lg ${darkMode ? 'text-white' : 'text-black'}`}>-TECH</span>
+          </a>
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg"
+            style={{ color: darkMode ? '#fff' : '#0D0D0D' }}
+          >
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
+      </motion.header>
+
+      {/* Sidebar Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-30 lg:hidden"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar - Toggleable below laptop (1024px) */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ x: -300 }}
+            animate={{ x: 0 }}
+            exit={{ x: -300 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed left-0 top-0 h-full w-72 z-40 lg:hidden"
+            style={{ 
+              background: darkMode ? 'rgba(13,13,13,0.98)' : 'rgba(255,255,255,0.98)',
+              backdropFilter: 'blur(20px)',
+              borderRight: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`
+            }}
+          >
+            <div className="flex flex-col h-full pt-20 px-6">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <span className="text-2xl font-bold gradient-text">ENCON</span>
+                  <span className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-black'}`}>-TECH</span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2"
+                  style={{ color: darkMode ? '#fff' : '#000000' }}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <nav className="flex flex-col gap-4">
+                {['about', 'services', 'why-us', 'portfolio', 'technology', 'process', 'contact'].map((item) => (
+                  <motion.button
+                    key={item}
+                    onClick={() => scrollToSection(item)}
+                    className={`text-left text-base font-medium py-2 transition-colors hover:text-[var(--orange-primary)] ${
+                      activeSection === item ? 'text-[var(--orange-primary)]' : darkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {item.charAt(0).toUpperCase() + item.slice(1).replace('-', ' ')}
+                  </motion.button>
+                ))}
+              </nav>
+              <div className="mt-auto pb-8">
+                <motion.button
+                  onClick={toggleTheme}
+                  className="flex items-center gap-3 py-3 w-full"
+                  style={{ color: darkMode ? '#fff' : '#000000' }}
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  <span className="text-sm">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style jsx global>{`
         :root {
-          --orange-primary: #FF6B35;
-          --orange-dark: #E85A24;
-          --orange-light: #FF8C42;
-          --black-primary: #0D0D0D;
+          --orange-primary: #F28C28;
+          --orange-dark: #D67A1F;
+          --orange-light: #F5A54D;
+          --black-primary: #000000;
           --black-secondary: #1A1A1A;
           --black-tertiary: #2D2D2D;
           --white-primary: #FFFFFF;
@@ -208,22 +414,23 @@ export default function Home() {
         }
       `}</style>
 
-      {/* Navigation */}
+      {/* Navigation - Desktop only (lg: and above) */}
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-2 left-2 right-2 z-50 transition-all duration-300 hidden lg:block ${
           scrolled ? 'glass shadow-lg' : 'bg-transparent'
         }`}
+        style={{ borderRadius: '12px', padding: '10px' }}
       >
-        <div className="container-custom flex items-center justify-between px-6 py-4">
+        <div className="container-custom flex items-center justify-between px-4 sm:px-5 lg:px-6 py-3 sm:py-4" style={{ paddingLeft: '4px', paddingRight: '4px' }}>
           <motion.a
             href="#"
             className="text-2xl font-bold tracking-tight"
             whileHover={{ scale: 1.02 }}
           >
             <span className="gradient-text">ENCON</span>
-            <span className={darkMode ? 'text-white' : 'text-black'}>-TECH</span>
+            <span className={`text-2xl ${darkMode ? 'text-white' : 'text-black'}`}>-TECH</span>
           </motion.a>
 
           <div className="hidden md:flex items-center gap-8">
@@ -296,7 +503,7 @@ export default function Home() {
                   transition={{ delay: i * 0.1 }}
                   onClick={() => scrollToSection(item)}
                   className="text-2xl font-semibold"
-                  style={{ color: darkMode ? '#fff' : '#0D0D0D' }}
+                  style={{ color: darkMode ? '#fff' : '#000000' }}
                 >
                   {item.charAt(0).toUpperCase() + item.slice(1).replace('-', ' ')}
                 </motion.button>
@@ -319,12 +526,12 @@ export default function Home() {
       <section
         id="hero"
         ref={heroRef}
-        className="min-h-screen flex items-center relative overflow-hidden"
+        className="min-h-screen flex items-center relative overflow-hidden pt-20"
       >
         <div className="absolute inset-0 gradient-mesh grid-lines" />
         
-        <div className="container-custom relative z-10 px-6 py-32">
-          <div className="max-w-4xl">
+        <div className="container-custom relative z-10 px-6 sm:px-8 lg:px-12 py-20 sm:py-32">
+          <div className="max-w-4xl ml-2 sm:ml-4 lg:ml-8">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -345,12 +552,12 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1 }}
-              className="text-5xl md:text-7xl font-bold leading-tight mb-6"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold leading-tight mb-4 sm:mb-6"
               style={{ fontFamily: 'Clash Display, sans-serif' }}
             >
               We don't just build{' '}
               <span className="gradient-text">software.</span>
-              <br />
+              <br className="hidden sm:block" />
               We engineer{' '}
               <span className="gradient-text">intelligent systems</span>
               <br />
@@ -361,7 +568,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-lg md:text-xl mb-10 max-w-2xl"
+              className="text-base sm:text-lg md:text-xl mb-6 sm:mb-10 max-w-xl md:max-w-2xl"
               style={{ color: darkMode ? '#888' : '#666' }}
             >
               Since 2020, Encon-Tech has been at the forefront of the AI revolution, 
@@ -400,9 +607,21 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.5 }}
-              className="absolute right-0 top-1/2 -translate-y-1/2 hidden lg:block"
+              className="absolute right-0 top-1/2 -translate-y-1/2 hidden lg:block pointer-events-none"
+              style={{ right: '-5%' }}
             >
-              <div className="float-animation relative w-80 h-80">
+              <motion.div 
+                className="relative w-64 h-64 lg:w-80 lg:h-80"
+                animate={{ 
+                  y: [0, -20, 0],
+                  rotate: [0, 2, 0]
+                }}
+                transition={{ 
+                  duration: 6, 
+                  repeat: Infinity, 
+                  ease: "easeInOut" 
+                }}
+              >
                 <div className="absolute inset-0 rounded-full pulse-glow" 
                   style={{ 
                     background: 'linear-gradient(135deg, var(--orange-primary), var(--orange-light))',
@@ -418,7 +637,7 @@ export default function Home() {
                 <div className="absolute inset-16 rounded-full flex items-center justify-center">
                   <Brain size={64} style={{ color: 'var(--orange-primary)' }} />
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           </div>
         </div>
@@ -428,15 +647,15 @@ export default function Home() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.5 }}
-          className="absolute bottom-0 left-0 right-0"
+          className="mt-16"
         >
-          <div className="container-custom px-6 pb-8">
-            <div className="flex flex-wrap gap-12 justify-center md:justify-start"
+          <div className="container-custom px-4 sm:px-6 pb-8">
+            <div className="flex flex-wrap gap-8 sm:gap-12 justify-center md:justify-start pt-8"
               style={{ borderTop: `1px solid ${darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}` }}
             >
               {stats.map((stat, i) => (
                 <div key={i} className="text-center md:text-left">
-                  <div className="text-4xl font-bold gradient-text">{stat.value}</div>
+                  <div className="text-3xl sm:text-4xl font-bold gradient-text">{stat.value}</div>
                   <div className="text-sm" style={{ color: darkMode ? '#888' : '#666' }}>{stat.label}</div>
                 </div>
               ))}
@@ -448,14 +667,14 @@ export default function Home() {
       {/* About Section */}
       <section id="about" className="section-padding" style={{ background: darkMode ? 'var(--black-primary)' : 'var(--white-primary)' }}>
         <div className="container-custom">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
+          <div className="grid sm:grid-cols-2 md:grid-cols-2 gap-10 md:gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <h2 className="text-4xl md:text-5xl font-bold mb-6" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6" style={{ fontFamily: 'Clash Display, sans-serif' }}>
                 Based in Karachi,<br />
                 <span className="gradient-text">Serving the World</span>
               </h2>
@@ -481,7 +700,7 @@ export default function Home() {
               <div className="relative z-10 p-8 rounded-2xl" 
                 style={{ background: darkMode ? 'var(--black-secondary)' : 'var(--white-secondary)' }}
               >
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-3 sm:gap-6">
                   {[
                     { icon: Brain, label: 'AI Agents', value: 'Production-Ready' },
                     { icon: Cpu, label: 'RAG Systems', value: '95% Accuracy' },
@@ -494,12 +713,12 @@ export default function Home() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.1 }}
-                      className="text-center p-4 rounded-xl"
+                      className="text-center p-2 sm:p-4 rounded-xl"
                       style={{ background: darkMode ? 'var(--black-tertiary)' : 'var(--white-tertiary)' }}
                     >
-                      <item.icon className="mx-auto mb-2" size={28} style={{ color: 'var(--orange-primary)' }} />
-                      <div className="text-sm" style={{ color: darkMode ? '#888' : '#666' }}>{item.label}</div>
-                      <div className="font-semibold">{item.value}</div>
+                      <item.icon className="mx-auto mb-1 sm:mb-2" size={20} style={{ color: 'var(--orange-primary)' }} />
+                      <div className="text-xs sm:text-sm" style={{ color: darkMode ? '#888' : '#666' }}>{item.label}</div>
+                      <div className="text-sm sm:font-semibold font-medium">{item.value}</div>
                     </motion.div>
                   ))}
                 </div>
@@ -522,12 +741,12 @@ export default function Home() {
             className="text-center mb-16"
           >
             <span className="text-sm font-medium" style={{ color: 'var(--orange-primary)' }}>OUR EXPERTISE</span>
-            <h2 className="text-4xl md:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
               Our Core <span className="gradient-text">Competencies</span>
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {services.map((service, i) => (
               <motion.div
                 key={i}
@@ -543,7 +762,7 @@ export default function Home() {
                 >
                   <service.icon size={28} style={{ color: 'var(--orange-primary)' }} />
                 </div>
-                <h3 className="text-xl font-semibold mb-3" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3" style={{ fontFamily: 'Clash Display, sans-serif' }}>
                   {service.title}
                 </h3>
                 <p className="text-sm leading-relaxed" style={{ color: darkMode ? '#aaa' : '#555' }}>
@@ -565,12 +784,12 @@ export default function Home() {
             className="text-center mb-16"
           >
             <span className="text-sm font-medium" style={{ color: 'var(--orange-primary)' }}>WHY ENCON-TECH</span>
-            <h2 className="text-4xl md:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
-              Why <span className="gradient-text">Forward-Thinking</span> Companies<br />Partner With Us
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+              Why <span className="gradient-text">Forward-Thinking</span> Companies<br className="sm:hidden" /> Partner With Us
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             {whyUs.map((item, i) => (
               <motion.div
                 key={i}
@@ -607,7 +826,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <span className="text-sm font-medium" style={{ color: 'var(--orange-primary)' }}>OUR WORK</span>
-            <h2 className="text-4xl md:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
               Featured <span className="gradient-text">Innovation</span> Portfolio
             </h2>
           </motion.div>
@@ -658,7 +877,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <span className="text-sm font-medium" style={{ color: 'var(--orange-primary)' }}>TECH STACK</span>
-            <h2 className="text-4xl md:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
               The Technology Behind <span className="gradient-text">Tomorrow</span>
             </h2>
           </motion.div>
@@ -696,12 +915,12 @@ export default function Home() {
             className="text-center mb-16"
           >
             <span className="text-sm font-medium" style={{ color: 'var(--orange-primary)' }}>OUR APPROACH</span>
-            <h2 className="text-4xl md:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mt-2" style={{ fontFamily: 'Clash Display, sans-serif' }}>
               From Vision to <span className="gradient-text">Value</span>
             </h2>
           </motion.div>
 
-          <div className="grid md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
             {process.map((item, i) => (
               <motion.div
                 key={i}
@@ -732,7 +951,7 @@ export default function Home() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="section-padding relative overflow-hidden" style={{ background: darkMode ? 'var(--black-primary)' : 'var(--white-primary)' }}>
+      <section id="contact" className="section-padding relative overflow-hidden px-4 sm:px-6" style={{ background: darkMode ? 'var(--black-primary)' : 'var(--white-primary)' }}>
         <div className="absolute inset-0 gradient-mesh grid-lines opacity-50" />
         
         <div className="container-custom relative z-10">
@@ -743,10 +962,10 @@ export default function Home() {
             className="text-center max-w-3xl mx-auto"
           >
             <span className="text-sm font-medium" style={{ color: 'var(--orange-primary)' }}>GET IN TOUCH</span>
-            <h2 className="text-4xl md:text-6xl font-bold mt-2 mb-6" style={{ fontFamily: 'Clash Display, sans-serif' }}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-bold mt-2 mb-4 sm:mb-6" style={{ fontFamily: 'Clash Display, sans-serif' }}>
               Ready to Build the <span className="gradient-text">Future</span>?
             </h2>
-            <p className="text-xl mb-10" style={{ color: darkMode ? '#aaa' : '#555' }}>
+            <p className="text-base sm:text-xl mb-6 sm:mb-10" style={{ color: darkMode ? '#aaa' : '#555' }}>
               Your vision deserves more than incremental improvement. It deserves transformation.
               <br />Let's architect intelligence together.
             </p>
@@ -780,7 +999,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="text-2xl font-bold">
               <span className="gradient-text">ENCON</span>
-              <span className={darkMode ? 'text-white' : 'text-black'}>-TECH</span>
+              <span className={`text-2xl ${darkMode ? 'text-white' : 'text-black'}`}>-TECH</span>
             </div>
             
             <div className="flex gap-8">
